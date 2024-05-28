@@ -125,7 +125,12 @@ export default function Home() {
         </Popup>
       </div>
       <div className={styles.container}>
-        <MyThree />
+        <MyThree
+          bikeStations={stations.map((station) => ({
+            coords: station.coords,
+            isFavourite: isFavourite(station.id),
+          }))}
+        />
       </div>
     </div>
   );

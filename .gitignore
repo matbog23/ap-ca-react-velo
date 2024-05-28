@@ -1,0 +1,57 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Ignore ESLint configuration file
+.eslintrc.json
+
+# Ignore Node.js package lock file
+package-lock.json
+
+# Ignore Next.js specific configuration files
+jsconfig.json
+next.config.mjs
+
+# Ignore Node.js modules
+node_modules/
+
+# Ignore build artifacts (assuming you have a build directory)
+build/
+
+# Ignore public assets
+public/favicon.ico
+public/next.svg
+public/vercel.svg

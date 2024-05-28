@@ -1,6 +1,7 @@
 .header {
   font-family: Roboto, sans-serif;
   color: white;
+  background-color: black;
   font-size: 4rem;
   position: relative;
   z-index: 2;
