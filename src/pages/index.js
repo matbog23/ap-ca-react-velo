@@ -63,10 +63,9 @@ export default function Home() {
   return (
     <div>
       <div>
-        <h1 className={headerStyles.header}>Antwerp city bikes</h1>
-        <input type="text" value={filter} onChange={handleFilterChange} />
         <Popup stations={stations}>
-          <h1>Travelling somewhere</h1>
+          <h1>Travelling somewhere?</h1>
+
           <h2>Favourites</h2>
 
           <div className="popup-scrollable">
@@ -96,6 +95,12 @@ export default function Home() {
             </ul>
           </div>
           <h2>Stations</h2>
+          <input
+            type="text"
+            value={filter}
+            onChange={handleFilterChange}
+            placeholder="Search"
+          />
           <div className="popup-scrollable">
             <ul>
               {stations.map((station) => (
