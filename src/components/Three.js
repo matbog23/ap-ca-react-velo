@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { useRouter } from "next/router";
 import styles from "@/styles/Canvas.module.css";
 
@@ -10,9 +9,7 @@ function MyThree() {
   const router = useRouter();
 
   // Variable to control the scale of the mountains
-  const mountainScale = 2; // Adjust as needed
-  // Variable to control the amount of smoothing
-  const smoothingFactor = 0.5; // Adjust as needed
+  const mountainScale = 5; // Adjust as needed
 
   useEffect(() => {
     const fetchStations = async () => {
@@ -47,7 +44,7 @@ function MyThree() {
       1,
       3000
     );
-    camera.position.set(0, 50 * mountainScale, 50 * mountainScale); // Move camera closer to the peaks and scale accordingly
+    camera.position.set(0, 300, 500); // Higher position to look more down
     camera.lookAt(new THREE.Vector3(0, 0, 0)); // Look at the center of the scene
 
     const renderer = new THREE.WebGLRenderer({ alpha: true });
@@ -58,12 +55,6 @@ function MyThree() {
       refContainer.current.appendChild(renderer.domElement);
     }
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableRotate = true;
-    controls.enablePan = true;
-    controls.enableZoom = true;
-    controls.zoomSpeed = 1.2;
-
     const width = window.innerWidth;
     const height = window.innerHeight;
 
@@ -73,71 +64,73 @@ function MyThree() {
       return new THREE.Vector2(x, y);
     };
 
-    // Create a single plane geometry
-    const planeGeometry = new THREE.PlaneGeometry(
-      width,
-      height,
-      200 * mountainScale,
-      200 * mountainScale
-    ); // Increase segments for finer detail and scale accordingly
+    // Create a plane geometry for the mountain range
+    const planeGeometry = new THREE.PlaneGeometry(width, height, 100, 100);
 
-    // Add color attribute to the geometry
-    const colors = [];
-    for (let i = 0; i < planeGeometry.attributes.position.count; i++) {
-      colors.push(0, 0, 0); // Initial color set to black
-    }
-    planeGeometry.setAttribute(
-      "color",
-      new THREE.Float32BufferAttribute(colors, 3)
-    );
-
-    const planeMaterial = new THREE.MeshBasicMaterial({
-      vertexColors: true, // Enable vertex colors
+    // Create a material with vertex colors
+    const material = new THREE.MeshBasicMaterial({
+      vertexColors: true,
       side: THREE.DoubleSide,
     });
-    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 2; // Rotate to lay flat
-    scene.add(plane);
 
-    // Elevate vertices based on latitude and longitude
+    const vertices = planeGeometry.attributes.position;
+    const colors = new Float32Array(vertices.count * 3);
+
+    // Helper function to apply gradient color based on height
+    const applyColorGradient = (height) => {
+      const color = new THREE.Color();
+      color.setHSL(0.6 - height / (20 * mountainScale), 1, 0.5);
+      return color;
+    };
+
+    // Modify vertices to create mountains
     bikeStations.forEach((station) => {
       const coords = mapToScreenCoordinates(
         station.latitude,
         station.longitude
       );
 
-      // Calculate index of the vertex closest to station coordinates
-      const index = Math.floor(
-        (coords.x / width) * planeGeometry.parameters.widthSegments +
-          Math.floor(
-            (coords.y / height) * planeGeometry.parameters.heightSegments
-          ) *
-            (planeGeometry.parameters.widthSegments + 1)
-      );
+      // Adjust heights of surrounding vertices for a smoother transition
+      for (let i = 0; i < vertices.count; i++) {
+        const vertex = new THREE.Vector3();
+        vertex.fromBufferAttribute(vertices, i);
+        const distance = vertex.distanceTo(
+          new THREE.Vector3(coords.x - width / 2, -coords.y + height / 2, 0)
+        );
 
-      if (index >= 0 && index < planeGeometry.attributes.position.count) {
-        // Elevate the vertex
-        const elevation = station.freeBikes * 0.2 * mountainScale; // Adjust elevation scale as needed and scale accordingly
-        planeGeometry.attributes.position.setZ(index, elevation);
+        // Influence range and falloff for smooth transitions
+        const influence = Math.max(0, 1 - distance / (width / 10));
+        const vertexHeight = influence * station.freeBikes * mountainScale;
 
-        // Color the vertex based on elevation
-        let color;
-        if (station.freeBikes > 6) {
-          color = new THREE.Color(0xffffff); // White for peaks
-        } else if (station.freeBikes > 2) {
-          color = new THREE.Color(0x808080); // Stone gray for middle part
-        } else {
-          color = new THREE.Color(0x000000); // Grass green for bottom
+        if (vertexHeight > vertices.getZ(i)) {
+          vertices.setZ(i, vertexHeight);
+
+          // Apply gradient color based on height
+          const color = applyColorGradient(vertexHeight);
+          colors[i * 3] = color.r;
+          colors[i * 3 + 1] = color.g;
+          colors[i * 3 + 2] = color.b;
         }
-        planeGeometry.attributes.color.setXYZ(index, color.r, color.g, color.b);
       }
     });
 
-    // Smooth out the mountains
-    smoothVertices(planeGeometry, smoothingFactor);
+    planeGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-    planeGeometry.attributes.position.needsUpdate = true;
-    planeGeometry.attributes.color.needsUpdate = true;
+    // Create a mesh for the plane
+    const plane = new THREE.Mesh(planeGeometry, material);
+    plane.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
+    scene.add(plane);
+
+    // Add user data for raycasting
+    plane.userData.stations = bikeStations;
+
+    // Lighting for the scene
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft white light
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(50, 50, 50).normalize();
+    scene.add(directionalLight);
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -149,12 +142,30 @@ function MyThree() {
 
       raycaster.setFromCamera(mouse, camera);
 
-      const intersects = raycaster.intersectObjects(scene.children, true);
+      const intersects = raycaster.intersectObject(plane, true);
 
       if (intersects.length > 0) {
-        const clickedObject = intersects[0].object;
-        if (clickedObject.userData.id) {
-          router.push(`/stations/${clickedObject.userData.id}`);
+        const clickedPoint = intersects[0].point;
+
+        // Find the closest station to the clicked point
+        let closestStation = null;
+        let minDistance = Infinity;
+        plane.userData.stations.forEach((station) => {
+          const coords = mapToScreenCoordinates(
+            station.latitude,
+            station.longitude
+          );
+          const distance = clickedPoint.distanceTo(
+            new THREE.Vector3(coords.x - width / 2, -coords.y + height / 2, 0)
+          );
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestStation = station;
+          }
+        });
+
+        if (closestStation) {
+          router.push(`/stations/${closestStation.id}`);
         }
       }
     };
@@ -165,12 +176,42 @@ function MyThree() {
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
 
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    const handleMouseDown = (event) => {
+      isDragging = true;
+      previousMousePosition = { x: event.clientX, y: event.clientY };
+    };
+
+    const handleMouseMove = (event) => {
+      if (isDragging) {
+        const deltaX = event.clientX - previousMousePosition.x;
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+
+        camera.position.x -= deltaX * 0.5;
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDragging = false;
+    };
+
+    const handleMouseWheel = (event) => {
+      camera.position.z += event.deltaY * 0.1;
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
+    };
+
     window.addEventListener("resize", handleResize);
     window.addEventListener("click", handleClick);
+    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("wheel", handleMouseWheel);
 
     const animate = () => {
       requestAnimationFrame(animate);
-      controls.update();
       renderer.render(scene, camera);
     };
 
@@ -179,77 +220,18 @@ function MyThree() {
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("click", handleClick);
+      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("wheel", handleMouseWheel);
       if (refContainer.current) {
         refContainer.current.removeChild(renderer.domElement);
       }
       renderer.dispose();
     };
-  }, [bikeStations, router, mountainScale, smoothingFactor]); // Add mountainScale and smoothingFactor to dependency array
+  }, [bikeStations, router, mountainScale]); // Add mountainScale to dependency
 
   return <div ref={refContainer} className={styles.canvasMap}></div>;
 }
 
 export default MyThree;
-
-function smoothVertices(geometry, factor) {
-  const smoothPositions = [];
-  for (let i = 0; i < geometry.attributes.position.count; i++) {
-    const vertex = new THREE.Vector3().fromBufferAttribute(
-      geometry.attributes.position,
-      i
-    );
-    const neighbors = findNeighbors(geometry, i);
-    let average = vertex.clone();
-    neighbors.forEach((neighbor) =>
-      average.add(
-        new THREE.Vector3().add(
-          new THREE.Vector3().fromBufferAttribute(
-            geometry.attributes.position,
-            neighbor
-          )
-        )
-      )
-    );
-    average.divideScalar(neighbors.length + 1);
-    smoothPositions.push(average);
-  }
-
-  // Update the positions with the smoothed ones
-  for (let i = 0; i < geometry.attributes.position.count; i++) {
-    geometry.attributes.position.setXYZ(
-      i,
-      smoothPositions[i].x * factor +
-        geometry.attributes.position.getX(i) * (1 - factor),
-      smoothPositions[i].y * factor +
-        geometry.attributes.position.getY(i) * (1 - factor),
-      smoothPositions[i].z * factor +
-        geometry.attributes.position.getZ(i) * (1 - factor)
-    );
-  }
-}
-
-function findNeighbors(geometry, index) {
-  const neighbors = [];
-  const widthSegments = geometry.parameters.widthSegments;
-  const heightSegments = geometry.parameters.heightSegments;
-  const totalVertices = (widthSegments + 1) * (heightSegments + 1);
-
-  if (index % (widthSegments + 1) > 0) {
-    // Left neighbor
-    neighbors.push(index - 1);
-  }
-  if (index % (widthSegments + 1) < widthSegments) {
-    // Right neighbor
-    neighbors.push(index + 1);
-  }
-  if (Math.floor(index / (widthSegments + 1)) > 0) {
-    // Top neighbor
-    neighbors.push(index - (widthSegments + 1));
-  }
-  if (Math.floor(index / (widthSegments + 1)) < heightSegments) {
-    // Bottom neighbor
-    neighbors.push(index + (widthSegments + 1));
-  }
-
-  return neighbors;
-}
