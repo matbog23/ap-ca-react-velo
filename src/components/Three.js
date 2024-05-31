@@ -13,7 +13,7 @@ function MyThree() {
     const fetchStations = async () => {
       try {
         const response = await fetch(
-          "http://api.citybik.es/v2/networks/velo-antwerpen"
+          "https://api.citybik.es/v2/networks/velo-antwerpen"
         );
         const data = await response.json();
         const stations = data.network.stations.map((station) => ({

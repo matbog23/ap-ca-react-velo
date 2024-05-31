@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import styles from "@/styles/Home.module.css";
-import headerStyles from "@/styles/Header.module.css";
-import favouriteStyles from "@/styles/Favourite.module.css";
-import SearchBar from "@/components/SearchBar";
-import Popup from "@/components/Popup";
-import MyThree from "@/components/Three";
-import useNetwork from "@/data/network";
+import styles from "../styles/Home.module.css";
+import headerStyles from "../styles/Header.module.css";
+import favouriteStyles from "../styles/Favourite.module.css";
+import SearchBar from "../components/SearchBar";
+import Popup from "../components/Popup";
+import MyThree from "../components/Three";
+import useNetwork from "../data/network";
 
 const HeartSVG = ({ width = "24px", height = "24px", isFavourite }) => (
   <svg
