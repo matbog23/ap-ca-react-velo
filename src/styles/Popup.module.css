@@ -5,18 +5,32 @@
   transform: translateX(-50%);
   width: 100vw;
   height: 100vh;
-  background-color: #c4bab5;
-  border-radius: 5px;
+  background-color: #000000;
+  border-radius: 20px;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
   transition: top 0.3s ease;
   font-family: "Roboto", sans-serif;
   z-index: 2;
+  border-top: 4px solid #c8d8e7;
 }
 
 .popup-content {
-  padding: 20px;
+  margin: 20px;
 }
 
 .popup-visible {
   top: 20vh;
+}
+
+.popup h1 {
+  color: #ffffff;
+  font-size: 3rem;
+  font-style: italic;
+}
+
+.popup h2 {
+  color: #ffffff;
+  font-size: 2rem;
+  margin: 20px;
+  margin-left: 0;
 }

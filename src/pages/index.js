@@ -1,7 +1,7 @@
 import styles from "@/styles/Home.module.css";
 import headerStyles from "@/styles/Header.module.css";
 import favouriteStyles from "@/styles/Favourite.module.css";
-
+import SearchBar from "@/components/SearchBar"; // Import the new SearchBar component
 import { useEffect, useState } from "react";
 import Popup from "@/components/Popup";
 import MyThree from "@/components/Three"; // Make sure you import MyThree correctly
@@ -64,13 +64,13 @@ export default function Home() {
     <div>
       <div>
         <Popup stations={stations}>
-          <h1>Travelling somewhere?</h1>
+          <h1>Antwerp Vélo</h1>
 
-          <h2>Favourites</h2>
-
+          <h2>Find Stations</h2>
+          <SearchBar value={filter} onChange={handleFilterChange} />
           <div className="popup-scrollable">
             <ul>
-              {favouriteStations.map((station) => (
+              {stations.map((station) => (
                 <Link
                   className="station-link"
                   href={`/stations/${station.id}`}
@@ -94,16 +94,11 @@ export default function Home() {
               ))}
             </ul>
           </div>
-          <h2>Stations</h2>
-          <input
-            type="text"
-            value={filter}
-            onChange={handleFilterChange}
-            placeholder="Search"
-          />
+          <h2>Favourites</h2>
+
           <div className="popup-scrollable">
             <ul>
-              {stations.map((station) => (
+              {favouriteStations.map((station) => (
                 <Link
                   className="station-link"
                   href={`/stations/${station.id}`}
