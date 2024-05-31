@@ -1,12 +1,13 @@
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
 import styles from "@/styles/Home.module.css";
 import headerStyles from "@/styles/Header.module.css";
 import favouriteStyles from "@/styles/Favourite.module.css";
-import SearchBar from "@/components/SearchBar"; // Import the new SearchBar component
-import { useEffect, useState } from "react";
+import SearchBar from "@/components/SearchBar";
 import Popup from "@/components/Popup";
-import MyThree from "@/components/Three"; // Make sure you import MyThree correctly
+import MyThree from "@/components/Three";
 import useNetwork from "@/data/network";
-import Link from "next/link";
 
 const HeartSVG = ({ width = "24px", height = "24px", isFavourite }) => (
   <svg
@@ -25,26 +26,25 @@ const HeartSVG = ({ width = "24px", height = "24px", isFavourite }) => (
 );
 
 export default function Home() {
-  const [filter, setFilter] = useState(""); //filter is an empty string - will act as search
-  const [favourites, setFavourites] = useState([]); //favourites is an empty array
+  const [filter, setFilter] = useState("");
+  const [favourites, setFavourites] = useState([]);
   const { network, isLoading, isError } = useNetwork();
 
   useEffect(() => {
-    console.log(localStorage.getItem("favourites"));
     const favs = JSON.parse(localStorage.getItem("favourites")) || [];
     setFavourites(favs);
-  }, []); //load favourites from local storage
+  }, []);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Failed to load</div>;
 
   const favouriteStations = network.stations.filter((station) =>
     favourites.includes(station.id)
-  ); //filter stations based on the favourites
+  );
 
   const stations = network.stations.filter(
     (station) => station.name.toLowerCase().indexOf(filter.toLowerCase()) >= 0
-  ); //filter stations based on the search query
+  );
 
   function handleFilterChange(e) {
     setFilter(e.target.value);
@@ -62,68 +62,64 @@ export default function Home() {
 
   return (
     <div>
-      <div>
-        <Popup stations={stations}>
-          <h1>Antwerp Vélo</h1>
-
-          <h2>Find Stations</h2>
-          <SearchBar value={filter} onChange={handleFilterChange} />
-          <div className="popup-scrollable">
-            <ul>
-              {stations.map((station) => (
-                <Link
-                  className="station-link"
-                  href={`/stations/${station.id}`}
-                  key={station.id}
-                >
-                  <li>
-                    <div>
-                      {station.name} - {station.free_bikes} bikes
-                    </div>
-                    <div
-                      className={`${favouriteStyles.heart}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toggleFavourite(station.id);
-                      }}
-                    >
-                      <HeartSVG isFavourite={isFavourite(station.id)} />
-                    </div>
-                  </li>
-                </Link>
-              ))}
-            </ul>
-          </div>
-          <h2>Favourites</h2>
-
-          <div className="popup-scrollable">
-            <ul>
-              {favouriteStations.map((station) => (
-                <Link
-                  className="station-link"
-                  href={`/stations/${station.id}`}
-                  key={station.id}
-                >
-                  <li>
-                    <div>
-                      {station.name} - {station.free_bikes} bikes
-                    </div>
-                    <div
-                      className={`${favouriteStyles.heart}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toggleFavourite(station.id);
-                      }}
-                    >
-                      <HeartSVG isFavourite={isFavourite(station.id)} />
-                    </div>
-                  </li>
-                </Link>
-              ))}
-            </ul>
-          </div>
-        </Popup>
-      </div>
+      <Popup stations={stations}>
+        <h1>Antwerp Vélo</h1>
+        <h2>Find Stations</h2>
+        <SearchBar value={filter} onChange={handleFilterChange} />
+        <div className="popup-scrollable">
+          <ul>
+            {stations.map((station) => (
+              <Link
+                className="station-link"
+                href={`/stations/${station.id}`}
+                key={station.id}
+              >
+                <li>
+                  <div>
+                    {station.name} - {station.free_bikes} bikes
+                  </div>
+                  <div
+                    className={`${favouriteStyles.heart}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleFavourite(station.id);
+                    }}
+                  >
+                    <HeartSVG isFavourite={isFavourite(station.id)} />
+                  </div>
+                </li>
+              </Link>
+            ))}
+          </ul>
+        </div>
+        <h2>Favourites</h2>
+        <div className="popup-scrollable">
+          <ul>
+            {favouriteStations.map((station) => (
+              <Link
+                className="station-link"
+                href={`/stations/${station.id}`}
+                key={station.id}
+              >
+                <li>
+                  <div>
+                    {station.name} - {station.free_bikes} bikes
+                  </div>
+                  <div
+                    className={`${favouriteStyles.heart}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleFavourite(station.id);
+                    }}
+                  >
+                    <HeartSVG isFavourite={isFavourite(station.id)} />
+                  </div>
+                </li>
+              </Link>
+            ))}
+          </ul>
+        </div>
+      </Popup>
       <div className={styles.container}>
         <MyThree
           bikeStations={stations.map((station) => ({
