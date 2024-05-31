@@ -42,7 +42,7 @@ next-env.d.ts
 package-lock.json
 
 # Ignore Next.js specific configuration files
-jsconfig.json
+
 next.config.mjs
 
 # Ignore Node.js modules
