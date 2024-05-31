@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
 import useNetwork from "@/data/network";
 import { useRouter } from "next/router";
+import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import styles from "@/styles/Station.module.css";
+import favouriteStyles from "@/styles/Favourite.module.css";
 
 const BackArrowIcon = () => (
   <svg
@@ -24,13 +25,35 @@ const BackArrowIcon = () => (
   </svg>
 );
 
+const HeartSVG = ({ width = "24px", height = "24px", isFavourite }) => (
+  <svg
+    width={width}
+    height={height}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={isFavourite ? favouriteStyles.favourite : ""}
+  >
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 20.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+  </svg>
+);
+
 export default function StationDetails() {
   const { network, isLoading, isError } = useNetwork();
   const router = useRouter();
   const refContainer = useRef(null);
+  const [favourites, setFavourites] = useState([]);
 
   useEffect(() => {
-    if (isLoading || isError || !network) return;
+    const favs = JSON.parse(localStorage.getItem("favourites")) || [];
+    setFavourites(favs);
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || isError || !network || !router.query.stationId) return;
 
     const station = network.stations.find(
       (station) => station.id === router.query.stationId
@@ -39,17 +62,14 @@ export default function StationDetails() {
     if (!station) return;
 
     const scene = new THREE.Scene();
-
-    // Set up camera to look straight at the mountain
     const camera = new THREE.PerspectiveCamera(
-      60,
+      70,
       window.innerWidth / window.innerHeight,
       1,
       1000
     );
-    camera.position.set(0, 0, 500); // Adjust the camera position
-    camera.lookAt(new THREE.Vector3(0, 20, 0)); // Look at the center of the scene
-
+    camera.position.set(0, 0, 350);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
     const renderer = new THREE.WebGLRenderer({ alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000000, 0);
@@ -70,7 +90,7 @@ export default function StationDetails() {
 
     const applyColorGradient = (height) => {
       const color = new THREE.Color();
-      color.setHSL(0.6 - height / (20 * station.free_bikes), 0.7, 0.5);
+      color.setHSL(0.6 - height / (20 * mountainScale), 0.7, 0.5);
       return color;
     };
 
@@ -82,8 +102,6 @@ export default function StationDetails() {
 
     const coords = mapToScreenCoordinates(station.latitude, station.longitude);
     const mountainScale = 5;
-
-    // Variables to store the position of the mountain
     let mountainPosX = 0;
     let mountainPosZ = 0;
 
@@ -99,8 +117,6 @@ export default function StationDetails() {
 
       if (vertexHeight > vertices.getZ(i)) {
         vertices.setZ(i, vertexHeight);
-
-        // Calculate position of the mountain
         if (vertexHeight > mountainPosZ) {
           mountainPosX = vertex.x;
           mountainPosZ = vertex.z;
@@ -116,16 +132,16 @@ export default function StationDetails() {
     planeGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     const plane = new THREE.Mesh(planeGeometry, material);
     plane.rotation.x = -Math.PI / 2;
-    plane.position.y = 0;
-    plane.position.x = -mountainPosX; // Offset plane position to center the mountain
+    plane.position.y = -110; //adjust to lower model
+    plane.position.x = -mountainPosX;
     plane.position.z = -mountainPosZ;
 
     scene.add(plane);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
     directionalLight.position.set(50, 50, 50).normalize();
     scene.add(directionalLight);
 
@@ -149,7 +165,7 @@ export default function StationDetails() {
         refContainer.current.removeChild(renderer.domElement);
       }
     };
-  }, [isLoading, isError, network, router.query.stationId]);
+  }, [isLoading, isError, network, router.query.stationId, favourites]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Failed to load</div>;
@@ -160,6 +176,16 @@ export default function StationDetails() {
 
   if (!station) return <div>Station not found</div>;
 
+  const isFavourite = (id) => favourites.includes(id);
+
+  const toggleFavourite = (id) => {
+    const newFavourites = isFavourite(id)
+      ? favourites.filter((favId) => favId !== id)
+      : [...favourites, id];
+    setFavourites(newFavourites);
+    localStorage.setItem("favourites", JSON.stringify(newFavourites));
+  };
+
   return (
     <div className={styles.stationContainer}>
       <header className={styles.header}>
@@ -167,6 +193,15 @@ export default function StationDetails() {
           <BackArrowIcon />
         </Link>
         <h1 className={styles.stationName}>{station.name}</h1>
+        <div
+          className={`${styles.heartPage}`}
+          onClick={(e) => {
+            e.preventDefault();
+            toggleFavourite(station.id);
+          }}
+        >
+          <HeartSVG isFavourite={isFavourite(station.id)} />
+        </div>
       </header>
       <div className={styles.stationDetails}>
         <p>
